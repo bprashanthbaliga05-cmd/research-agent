@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+groq
+tavily-python
+mcp
+duckduckgo-search
+python-dotenv
