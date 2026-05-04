@@ -16,7 +16,10 @@ export default function App() {
     setReport('')                                  // ← reset report
     setRunning(true)
 
-    const es = new EventSource(`http://localhost:8000/run?topic=${encodeURIComponent(topic)}`)
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    const es = new EventSource(`${API_URL}/run?topic=${encodeURIComponent(topic)}`)
+
+    // const es = new EventSource(`http://localhost:8000/run?topic=${encodeURIComponent(topic)}`)
 
     es.onmessage = (e) => {
       const { node, status, log, report: finalReport } = JSON.parse(e.data)
