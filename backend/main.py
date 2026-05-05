@@ -20,4 +20,11 @@ async def run(topic: str):
     async def event_stream():
         async for event in run_agent(topic):
             yield f"data: {json.dumps(event)}\n\n"
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+    return StreamingResponse(
+                event_stream(), 
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no"      # ← important for Railway
+                })

@@ -34,8 +34,14 @@ export default function App() {
       }
     }
 
-    es.onerror = () => {
+    es.onerror = (e) => {
+      console.error('SSE connection error:', e)
       setRunning(false)
+      setLogs(prev => [...prev, {
+          node: 'error',
+          log: 'Connection dropped — please try again',
+          time: new Date().toLocaleTimeString()
+      }])
       es.close()
     }
   }
