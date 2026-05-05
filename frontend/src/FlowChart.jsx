@@ -2,10 +2,11 @@ import ReactFlow, { Background, Controls } from 'reactflow'
 import 'reactflow/dist/style.css'
 
 const STATUS_STYLES = {
-  idle:   { background: '#1a1a1a', border: '1px solid #333',    color: '#888' },
-  active: { background: '#1a3a5c', border: '2px solid #3B8BD4', color: '#fff', boxShadow: '0 0 12px #3B8BD466' },
-  done:   { background: '#1a3a2a', border: '1px solid #3B9E6A', color: '#aef' },
-  error:  { background: '#3a1a1a', border: '1px solid #e44',    color: '#faa' },
+  idle:               { background: '#1a1a1a', border: '1px solid #333',    color: '#888' },
+  active:             { background: '#1a3a5c', border: '2px solid #3B8BD4', color: '#fff', boxShadow: '0 0 12px #3B8BD466' },
+  done:               { background: '#1a3a2a', border: '1px solid #3B9E6A', color: '#aef' },
+  awaiting_approval:  { background: '#2a2a1a', border: '2px solid #f59e0b', color: '#fcd34d', boxShadow: '0 0 12px #f59e0b66' }, // ← new
+  error:              { background: '#3a1a1a', border: '1px solid #e44',    color: '#faa' },
 }
 
 const BASE_NODES = [
