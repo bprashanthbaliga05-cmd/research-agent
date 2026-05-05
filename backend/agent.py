@@ -1,18 +1,21 @@
 import os
+import asyncio
 from groq import Groq
-from tavily import TavilyClient
 from dotenv import load_dotenv
+from tools import search_with_mcp
 
 load_dotenv()
 
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
-async def run_agent(topic: str):
+# Global store for pending approvals
+pending_approvals = {}
+
+async def run_agent(topic: str, session_id: str):
 
     # Step 1 — Input
     yield {"node": "input", "status": "active", "log": f'Topic received: "{topic}"'}
-    yield {"node": "input", "status": "done",   "log": "Topic queued for planning"}
+    yield {"node": "input", "status": "done", "log": "Topic queued for planning"}
 
     # Step 2 — Planner
     yield {"node": "planner", "status": "active", "log": "Breaking topic into subtasks..."}
@@ -20,21 +23,43 @@ async def run_agent(topic: str):
         model="llama-3.3-70b-versatile",
         messages=[{
             "role": "user",
-            "content": f"Break this research topic into 3 specific search queries: {topic}. Return only a numbered list."
+            "content": f"Break this research topic into 3 specific search queries: {topic}. Return only a numbered list, nothing else."
         }],
         max_tokens=200
     )
-    queries_text = planner_response.choices[0].message.content
-    yield {"node": "planner", "status": "done", "log": queries_text[:120]}
+    queries = planner_response.choices[0].message.content
 
-    # Step 3 — Web Search
-    yield {"node": "web_search", "status": "active", "log": "Searching the web..."}
-    search_results = tavily_client.search(query=topic, max_results=5)
-    sources = search_results["results"]
-    search_context = "\n".join([f"- {r['title']}: {r['content'][:200]}" for r in sources])
-    yield {"node": "web_search", "status": "done", "log": f"Found {len(sources)} sources"}
+    # HITL — pause and wait for human approval
+    approval_event = asyncio.Event()
+    pending_approvals[session_id] = {
+        "event": approval_event,
+        "queries": queries,
+        "approved_queries": None
+    }
 
-    # Step 4 — Doc Reader (summarise each source)
+    # Tell frontend to show approval UI
+    yield {
+        "node": "planner",
+        "status": "awaiting_approval",
+        "log": "Waiting for your approval...",
+        "data": queries
+    }
+
+    # Agent pauses here until human approves
+    await approval_event.wait()
+
+    # Use human approved/edited queries
+    approved_queries = pending_approvals[session_id]["approved_queries"]
+    del pending_approvals[session_id]
+
+    yield {"node": "planner", "status": "done", "log": f"Approved! Using: {approved_queries[:80]}..."}
+
+    # Step 3 — Web Search via MCP
+    yield {"node": "web_search", "status": "active", "log": "Connecting to Tavily MCP server..."}
+    search_context = await search_with_mcp(approved_queries)
+    yield {"node": "web_search", "status": "done", "log": "MCP search complete"}
+
+    # Step 4 — Doc Reader
     yield {"node": "doc_reader", "status": "active", "log": "Reading and extracting content..."}
     doc_response = groq_client.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -45,7 +70,7 @@ async def run_agent(topic: str):
         max_tokens=300
     )
     summary = doc_response.choices[0].message.content
-    yield {"node": "doc_reader", "status": "done", "log": f"Extracted key points from {len(sources)} sources"}
+    yield {"node": "doc_reader", "status": "done", "log": "Key points extracted"}
 
     # Step 5 — Synthesizer
     yield {"node": "synthesizer", "status": "active", "log": "Merging and synthesizing findings..."}
@@ -66,10 +91,14 @@ async def run_agent(topic: str):
         model="llama-3.3-70b-versatile",
         messages=[{
             "role": "user",
-            "content": f"Write a structured research report about '{topic}' based on this analysis:\n{synthesis}\n\nFormat: Title, Executive Summary, Key Findings, Conclusion."
+            "content": f"Write a structured research report about '{topic}' based on:\n{synthesis}\n\nFormat with markdown: # Title, ## Executive Summary, ## Key Findings, ## Conclusion."
         }],
         max_tokens=600
     )
     report = report_response.choices[0].message.content
-    # print(report)
-    yield {"node": "report", "status": "done", "log": "Report Ready", "report": report}
+    yield {
+        "node": "report",
+        "status": "done",
+        "log": "Report ready",
+        "report": report
+    }
