@@ -5,3 +5,5 @@ tavily-python
 mcp
 duckduckgo-search
 python-dotenv
+tenacity
+slowapi
