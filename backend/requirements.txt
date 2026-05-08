@@ -7,3 +7,7 @@ duckduckgo-search
 python-dotenv
 tenacity
 slowapi
+langgraph
+crewai
+crewai-tools
+crewai[litellm]

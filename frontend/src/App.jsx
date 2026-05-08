@@ -15,6 +15,7 @@ export default function App() {
   const [sessionId, setSessionId] = useState(null)
   const [health, setHealth] = useState(null)
   const [usage, setUsage] = useState(null)   // ← add this
+  const [framework, setFramework] = useState('langgraph')
 
   // HITL state
   const [awaitingApproval, setAwaitingApproval] = useState(false)
@@ -76,7 +77,7 @@ export default function App() {
     setPendingQueries('')
 
     const es = new EventSource(
-      `${API_URL}/run?topic=${encodeURIComponent(topic)}`
+      `${API_URL}/run?topic=${encodeURIComponent(topic)}&framework=${framework}`
     )
 
     es.onmessage = (e) => {
@@ -160,6 +161,23 @@ export default function App() {
   return (
     <div style={{ display: 'flex', height: '100vh', flexDirection: 'column' }}>
       {/* Header */}
+      <select
+          value={framework}
+          onChange={e => setFramework(e.target.value)}
+          style={{
+              padding: '7px 12px',
+              borderRadius: 8,
+              border: '1px solid #333',
+              background: '#1a1a1a',
+              color: '#fff',
+              fontSize: 13,
+              cursor: 'pointer'
+          }}
+      >
+          <option value="langgraph">LangGraph</option>
+          <option value="crewai">CrewAI</option>
+          <option value="groq">Groq</option>
+      </select>
       <div style={{ padding: '12px 20px', borderBottom: '1px solid #222', display: 'flex', gap: 12, alignItems: 'center', background: '#111' }}>
         <span style={{ fontWeight: 600, fontSize: 14 }}>🤖 Research Agent</span>
 

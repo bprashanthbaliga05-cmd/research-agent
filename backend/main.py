@@ -34,7 +34,7 @@ class ApprovalBody(BaseModel):
 
 @app.get("/run")
 @limiter.limit("5/minute")   # ← max 5 agent runs per minute per user
-async def run(request: Request, topic: str):
+async def run(request: Request, topic: str, framework: str = "langgraph"):
     # ─── Validate input ───────────────────────────────────────
     is_valid, error_message = validate_topic(topic)
     if not is_valid:
@@ -49,7 +49,9 @@ async def run(request: Request, topic: str):
         try:
             # Send session_id to frontend first so it can approve later
             yield f"data: {json.dumps({'session_id': session_id, 'node': 'session', 'status': 'started', 'log': ''})}\n\n"
-            async for event in run_agent(topic, session_id):
+            async for event in run_agent(topic, session_id, framework=framework):
+                print("\n\n\n")
+                print(json.dumps(event))
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as e:
             print("STREAM ERROR:", traceback.format_exc())
